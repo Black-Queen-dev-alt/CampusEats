@@ -1,0 +1,74 @@
+# Fichier de test des requêtes REST pour Visual Studio Code (Extension REST Client)
+# Variable globale
+@baseUrl = http://localhost:3000
+
+### 1. Healthcheck
+GET {{baseUrl}}/health
+
+### 2. Inscription d'un étudiant (Public)
+# @name registerStudent
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "etudiant.test@univ-campus.fr",
+  "password": "Password123!",
+  "fullName": "Thomas Dubois",
+  "phone": "0601020304"
+}
+
+### 3. Connexion
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "etudiant.test@univ-campus.fr",
+  "password": "Password123!"
+}
+
+### Sauvegarde des jetons depuis la réponse de login
+@accessToken = {{login.response.body.data.accessToken}}
+@refreshToken = {{login.response.body.data.refreshToken}}
+
+### 4. Consulter son profil (/me) - Connecté
+GET {{baseUrl}}/me
+Authorization: Bearer {{accessToken}}
+
+### 5. Modifier son profil (/me)
+PATCH {{baseUrl}}/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Thomas D. Modifié",
+  "phone": "0699887766"
+}
+
+### 6. Rotation du Refresh Token (Renouvellement)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 7. Test de sécurité : tentative d'accéder à la route Admin avec un compte étudiant (doit retourner 403 Forbidden)
+POST {{baseUrl}}/admin/users
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "chef.cuisine@univ-campus.fr",
+  "password": "ChefPassword123!",
+  "fullName": "Chef Pierre",
+  "role": "personnel"
+}
+
+### 8. Déconnexion (révoque la session)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}

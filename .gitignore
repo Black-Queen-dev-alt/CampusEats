@@ -1,0 +1,21 @@
+# Dépendances (Ne JAMAIS commiter node_modules)
+node_modules/
+
+# Fichiers d'environnement & Secrets (Exigence A3 : Zéro secret sur Git !)
+.env
+.env.local
+.env.*.local
+
+# Dossiers de compilation
+dist/
+build/
+.dart_tool/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers système
+.DS_Store
+Thumbs.db
