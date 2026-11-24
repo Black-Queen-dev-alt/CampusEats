@@ -1,17 +1,18 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import { errorHandler } from './common/middlewares/error.middleware';
-import { authRoutes } from './modules/auth/auth.routes';
-import { userRoutes } from './modules/users/user.routes';
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { errorHandler } from "./common/middlewares/error.middleware";
+import { authRoutes } from "./modules/auth/auth.routes";
+import { userRoutes } from "./modules/users/user.routes";
+import { timeSlotRoutes } from "./modules/time-slots/time-slot.routes";
 
 export const app = express();
 
 // 1. Middlewares de sécurité de base (Exigence A11)
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: "10kb" }));
 
 // 2. Limitation de débit pour l'authentification (Exigence A11)
 const authLimiter = rateLimit({
@@ -20,27 +21,27 @@ const authLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Trop de requêtes, veuillez réessayer dans quelques minutes.',
+      code: "RATE_LIMIT_EXCEEDED",
+      message: "Trop de requêtes, veuillez réessayer dans quelques minutes.",
       details: null,
     },
   },
 });
-app.use('/auth', authLimiter);
+app.use("/auth", authLimiter);
 
 // 3. Health Check
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // 4. Routes des modules
-app.use('/auth', authRoutes);
-app.use('/', userRoutes);
+app.use("/auth", authRoutes);
+app.use("/", userRoutes);
+app.use("/time-slots", timeSlotRoutes);
 
 // Futurs modules de vos camarades (Développeurs 2, 3 et 4)
 // app.use('/dishes', dishRoutes);
 // app.use('/menus', menuRoutes);
-// app.use('/time-slots', timeSlotRoutes);
 // app.use('/orders', orderRoutes);
 
 // 5. Gestionnaire d'erreurs centralisé unique (Exigence A5)
