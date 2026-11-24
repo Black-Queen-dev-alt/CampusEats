@@ -41,7 +41,6 @@ const MenuSchema = new Schema<IMenu>(
       required: true,
       unique: true, // RÈGLE CRITIQUE : UN SEUL MENU PAR DATE
       match: /^\d{4}-\d{2}-\d{2}$/,
-      index: true,
     },
     items: {
       type: [MenuItemSchema],
