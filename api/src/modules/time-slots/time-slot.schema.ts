@@ -16,7 +16,11 @@ const timeSchema = z
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure invalide (HH:mm)");
 const capacitySchema = z.number().int().min(1).max(10000);
 
-export const listTimeSlotsQuerySchema = z.object({ date: dateSchema }).strict();
+export const listTimeSlotsQuerySchema = z.object({
+  date: dateSchema,
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
 
 export const createTimeSlotSchema = z
   .object({
@@ -25,7 +29,6 @@ export const createTimeSlotSchema = z
     endTime: timeSchema,
     capacity: capacitySchema,
   })
-  .strict()
   .refine((value) => value.startTime < value.endTime, {
     message: "L’heure de fin doit être postérieure à l’heure de début",
     path: ["endTime"],
@@ -38,7 +41,6 @@ export const updateTimeSlotSchema = z
     endTime: timeSchema.optional(),
     capacity: capacitySchema.optional(),
   })
-  .strict()
   .refine((value) => Object.keys(value).length > 0, {
     message: "Au moins un champ doit être fourni",
   })

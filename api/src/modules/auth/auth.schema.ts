@@ -1,18 +1,22 @@
 import { z } from 'zod';
 
 export const registerSchema = z.object({
-  email: z.string().email('Format d\'email universitaire invalide').toLowerCase().trim(),
-  password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
-  fullName: z.string().min(2, 'Le nom complet doit contenir au moins 2 caractères').trim(),
-  phone: z.string().optional(),
+  email: z.string().trim().toLowerCase().email('Format d\'email universitaire invalide'),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères').max(128),
+  fullName: z.string().trim().min(2, 'Le nom complet doit contenir au moins 2 caractères').max(100),
+  phone: z.string().trim().min(1).max(30).optional(),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email('Email invalide').toLowerCase().trim(),
-  password: z.string().min(1, 'Le mot de passe est requis'),
+  email: z.string().trim().toLowerCase().email('Email invalide'),
+  password: z.string().min(1, 'Le mot de passe est requis').max(128),
 });
 
 export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Le jeton de rafraîchissement est requis'),
+});
+
+export const logoutSchema = z.object({
   refreshToken: z.string().min(1, 'Le jeton de rafraîchissement est requis'),
 });
 

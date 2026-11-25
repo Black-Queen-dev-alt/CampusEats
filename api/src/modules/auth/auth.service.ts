@@ -80,15 +80,15 @@ export class AuthService {
   // Rotation stricte du refresh token (Exigence A6)
   static async refresh(rawRefreshToken: string) {
     const tokenHash = hashToken(rawRefreshToken);
-    const storedToken = await RefreshToken.findOne({ tokenHash });
+    const storedToken = await RefreshToken.findOneAndUpdate(
+      { tokenHash, revoked: false, expiresAt: { $gt: new Date() } },
+      { $set: { revoked: true } },
+      { new: false },
+    );
 
-    if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
+    if (!storedToken) {
       throw AppError.unauthorized('Jeton de rafraîchissement invalide ou expiré.');
     }
-
-    // Invalider l'ancien token pour empêcher le rejeu
-    storedToken.revoked = true;
-    await storedToken.save();
 
     const user = await User.findById(storedToken.userId);
     if (!user || user.status === 'suspendu') {

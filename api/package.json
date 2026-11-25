@@ -2,6 +2,9 @@
   "name": "campuseats-api",
   "version": "1.0.0",
   "description": "API REST Node.js/Express 5/MongoDB pour CampusEats",
+  "engines": {
+    "node": ">=24"
+  },
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

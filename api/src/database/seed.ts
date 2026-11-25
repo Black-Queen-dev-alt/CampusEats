@@ -7,33 +7,25 @@ import { Menu } from '../modules/menus/menu.model';
 
 function getFormattedDate(offsetDays = 0): string {
   const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
   return d.toISOString().split('T')[0];
 }
 
 async function seedDatabase(): Promise<void> {
   console.log('🌱 Démarrage du script de peuplement (Seed CampusEats - Développeur 2)...');
-  console.log(`🔌 Connexion à MongoDB : ${env.MONGO_URI}`);
+  console.log('🔌 Connexion à MongoDB...');
 
   await mongoose.connect(env.MONGO_URI);
 
-  // 1. Nettoyage des collections
-  console.log('🧹 Purge des données...');
-  await Promise.all([
-    User.deleteMany({}),
-    Dish.deleteMany({}),
-    Menu.deleteMany({}),
-  ]);
-
-  // 2. Création des utilisateurs avec hachage Argon2id (Exigence A6)
-  console.log('👤 Création des comptes de démonstration (Argon2id)...');
+  // Les comptes de démonstration ne remplacent ni ne suppriment les données existantes.
+  console.log('👤 Vérification des comptes de démonstration (Argon2id)...');
   const [adminPassword, staffPassword, studentPassword] = await Promise.all([
     hashPassword('Admin1234!'),
     hashPassword('Staff1234!'),
     hashPassword('Student1234!'),
   ]);
 
-  await User.create([
+  const demoUsers = [
     {
       email: 'admin@campuseats.univ.edu',
       password: adminPassword,
@@ -66,11 +58,20 @@ async function seedDatabase(): Promise<void> {
       status: 'actif',
       phone: '+226 70 00 00 03',
     },
-  ]);
+  ];
+  await Promise.all(
+    demoUsers.map((user) =>
+      User.updateOne(
+        { email: user.email },
+        { $setOnInsert: user },
+        { upsert: true, runValidators: true },
+      ),
+    ),
+  );
 
   // 3. Création du Catalogue de Plats (11 plats variés avec allergènes & prix entiers en centimes - RG09)
   console.log('🍲 Création du catalogue de plats du restaurant universitaire...');
-  const dishes = await Dish.create([
+  const dishSeeds = [
     // Entrées
     {
       name: 'Salade Fraîcheur Maraîchère',
@@ -185,7 +186,16 @@ async function seedDatabase(): Promise<void> {
       photoUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500',
       isActive: true,
     },
-  ]);
+  ];
+  const dishes = await Promise.all(
+    dishSeeds.map((dish) =>
+      Dish.findOneAndUpdate(
+        { name: dish.name },
+        { $setOnInsert: dish },
+        { upsert: true, new: true, runValidators: true },
+      ),
+    ),
+  );
 
   // 4. Création des Menus Journaliers (Dates uniques : Hier, Aujourd'hui, Demain)
   console.log('📅 Création des menus du jour avec dates uniques...');
@@ -199,7 +209,7 @@ async function seedDatabase(): Promise<void> {
     dailyStockLimit: 50,
   }));
 
-  await Menu.create([
+  const demoMenus = [
     {
       date: yesterday,
       isPublished: true,
@@ -215,7 +225,16 @@ async function seedDatabase(): Promise<void> {
       isPublished: true,
       items: menuItems,
     },
-  ]);
+  ];
+  await Promise.all(
+    demoMenus.map((menu) =>
+      Menu.updateOne(
+        { date: menu.date },
+        { $setOnInsert: menu },
+        { upsert: true, runValidators: true },
+      ),
+    ),
+  );
 
   console.log('\n================================================================');
   console.log('✅ BASE DE DONNÉES PEUPLÉE AVEC SUCCÈS (Seed Développeur 2) !');
@@ -233,7 +252,8 @@ async function seedDatabase(): Promise<void> {
   await mongoose.disconnect();
 }
 
-seedDatabase().catch((err) => {
+seedDatabase().catch(async (err) => {
   console.error('❌ Erreur lors de l\'exécution du seed :', err);
-  process.exit(1);
+  await mongoose.disconnect();
+  process.exitCode = 1;
 });

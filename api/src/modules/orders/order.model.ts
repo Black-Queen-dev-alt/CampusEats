@@ -35,7 +35,20 @@ const OrderSchema = new Schema<OrderDocument>(
       default: 'received',
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_doc, ret: Record<string, unknown>) => {
+        delete ret.__v;
+        ret.id = ret._id;
+        delete ret._id;
+        return ret;
+      },
+    },
+  }
 );
+
+OrderSchema.index({ studentId: 1, createdAt: -1 });
+OrderSchema.index({ slotId: 1, status: 1, createdAt: -1 });
 
 export const Order = model<OrderDocument>('Order', OrderSchema);

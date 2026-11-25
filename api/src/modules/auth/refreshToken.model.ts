@@ -20,7 +20,6 @@ const RefreshTokenSchema = new Schema<IRefreshToken>(
     tokenHash: {
       type: String,
       required: true,
-      index: true,
     },
     expiresAt: {
       type: Date,
@@ -38,5 +37,6 @@ const RefreshTokenSchema = new Schema<IRefreshToken>(
 
 // Index TTL MongoDB : supprime automatiquement le document quand la date expiresAt est atteinte
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+RefreshTokenSchema.index({ tokenHash: 1 }, { unique: true });
 
 export const RefreshToken = mongoose.model<IRefreshToken>('RefreshToken', RefreshTokenSchema);

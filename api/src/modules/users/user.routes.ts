@@ -2,8 +2,13 @@ import { Router } from 'express';
 import { UserController } from './user.controller';
 import { authenticate } from '../../common/middlewares/auth.middleware';
 import { authorize } from '../../common/middlewares/role.middleware';
-import { validate } from '../../common/middlewares/validate.middleware';
-import { updateProfileSchema, createStaffOrAdminSchema, updateUserStatusSchema } from './user.schema';
+import { validate, validateParams } from '../../common/middlewares/validate.middleware';
+import {
+  updateProfileSchema,
+  createStaffOrAdminSchema,
+  updateUserStatusSchema,
+  userIdParamsSchema,
+} from './user.schema';
 
 export const userRoutes = Router();
 
@@ -24,6 +29,7 @@ userRoutes.patch(
   '/admin/users/:id/status',
   authenticate,
   authorize('admin'),
+  validateParams(userIdParamsSchema),
   validate(updateUserStatusSchema),
   UserController.updateStatus
 );
