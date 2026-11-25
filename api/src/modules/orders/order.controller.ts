@@ -1,4 +1,3 @@
-// src/modules/orders/order.controller.ts
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { OrderService } from './order.service';
@@ -8,8 +7,8 @@ import { asyncHandler } from '../../utils/asyncHandler';
  * POST /orders – crée une commande (étudiant uniquement).
  */
 export const createOrder = asyncHandler(async (req: Request, res: Response) => {
-  const studentId = req.user.id; // middleware auth ajoute user
-  const { slotId, menuId, lines } = req.body; // lines = [{ dishId, quantity }]
+  const studentId = req.user!.id;
+  const { slotId, menuId, lines } = req.body;
   const order = await OrderService.createOrder({
     studentId: new Types.ObjectId(studentId),
     slotId: new Types.ObjectId(slotId),
@@ -21,7 +20,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
 /** GET /orders – historique paginé de l'étudiant */
 export const getMyOrders = asyncHandler(async (req: Request, res: Response) => {
-  const studentId = req.user.id;
+  const studentId = req.user!.id;
   const { page = 1, limit = 20 } = req.query as any;
   const result = await OrderService.getStudentOrders({
     studentId: new Types.ObjectId(studentId),
@@ -33,9 +32,10 @@ export const getMyOrders = asyncHandler(async (req: Request, res: Response) => {
 
 /** POST /orders/:id/cancel – annulation par le propriétaire */
 export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
-  const requesterId = req.user.id;
+  const requesterId = req.user!.id;
+  const orderId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   await OrderService.cancelOrder({
-    orderId: new Types.ObjectId(req.params.id),
+    orderId: new Types.ObjectId(orderId),
     requesterId: new Types.ObjectId(requesterId),
   });
   res.status(200).json({ message: 'Order cancelled' });
@@ -44,8 +44,9 @@ export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
 /** GET /time-slots/:id/orders – vue du personnel */
 export const getSlotOrders = asyncHandler(async (req: Request, res: Response) => {
   const { status, page = 1, limit = 20 } = req.query as any;
+  const slotId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const result = await OrderService.getSlotOrders({
-    slotId: new Types.ObjectId(req.params.id),
+    slotId: new Types.ObjectId(slotId),
     status: status as string | undefined,
     page: Number(page),
     limit: Number(limit),
@@ -55,10 +56,11 @@ export const getSlotOrders = asyncHandler(async (req: Request, res: Response) =>
 
 /** PATCH /orders/:id/status – changement de statut (personnel) */
 export const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
-  const requesterId = req.user.id;
+  const requesterId = req.user!.id;
   const { status: newStatus } = req.body;
+  const orderId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const order = await OrderService.updateStatus({
-    orderId: new Types.ObjectId(req.params.id),
+    orderId: new Types.ObjectId(orderId),
     newStatus,
     requesterId: new Types.ObjectId(requesterId),
   });

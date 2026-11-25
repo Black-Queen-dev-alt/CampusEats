@@ -25,6 +25,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
 
     req.user = {
       userId: user._id.toString(),
+      id: user._id.toString(),
       role: user.role,
       email: user.email,
     };

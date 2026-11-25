@@ -95,10 +95,9 @@ export const OrderService = {
     order.status = newStatus;
     await order.save();
 
-    // Envoi de la notification push quand le statut devient « ready »
+    // Envoi de la notification push quand le statut devient « ready »
     if (newStatus === 'ready') {
-      await sendPushNotification({
-        token: order.studentId.toHexString(), // ici on utilise l’id étudiant comme token factice
+      await sendPushNotification(order.studentId.toHexString(), {
         title: 'Votre repas est prêt !',
         body: 'Rendez‑vous à la cantine pour le récupérer.',
       });

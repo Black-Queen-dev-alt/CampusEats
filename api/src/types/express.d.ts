@@ -1,13 +1,16 @@
-export {};
+import { UserRole } from '../modules/users/user.model';
 
 declare global {
   namespace Express {
     interface Request {
       user?: {
         userId: string;
-        role: 'etudiant' | 'personnel' | 'admin';
-        email: string;
+        id: string;
+        role: UserRole;
+        email?: string;
       };
     }
   }
 }
+
+export {};
