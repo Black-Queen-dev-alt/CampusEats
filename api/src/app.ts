@@ -5,6 +5,8 @@ import rateLimit from 'express-rate-limit';
 import { errorHandler } from './common/middlewares/error.middleware';
 import { authRoutes } from './modules/auth/auth.routes';
 import { userRoutes } from './modules/users/user.routes';
+import { dishRoutes } from './modules/dishes/dish.routes';
+import { menuRoutes } from './modules/menus/menu.routes';
 
 export const app = express();
 
@@ -37,9 +39,11 @@ app.get('/health', (_req, res) => {
 app.use('/auth', authRoutes);
 app.use('/', userRoutes);
 
-// Futurs modules de vos camarades (Développeurs 2, 3 et 4)
-// app.use('/dishes', dishRoutes);
-// app.use('/menus', menuRoutes);
+// Modules du Développeur 2
+app.use('/dishes', dishRoutes);
+app.use('/menus', menuRoutes);
+
+// Futurs modules de vos camarades (Développeurs 3 et 4)
 // app.use('/time-slots', timeSlotRoutes);
 // app.use('/orders', orderRoutes);
 
