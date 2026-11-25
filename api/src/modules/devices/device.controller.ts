@@ -5,7 +5,7 @@ import { asyncHandler } from '../../utils/asyncHandler';
 
 /** Enregistre ou met à jour le token FCM d’un utilisateur */
 export const registerDevice = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user.id;
+  const userId = req.user!.id;
   const { fcmToken } = req.body;
 
   if (!fcmToken) {
