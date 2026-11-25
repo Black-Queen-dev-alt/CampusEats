@@ -35,6 +35,11 @@ app.get('/health', (_req, res) => {
 
 // 4. Routes des modules
 app.use('/auth', authRoutes);
+import ordersRouter from './routes/orders';
+import devicesRouter from './routes/devices';
+app.use('/orders', ordersRouter);
+app.use('/devices', devicesRouter);
+
 app.use('/', userRoutes);
 
 // Futurs modules de vos camarades (Développeurs 2, 3 et 4)

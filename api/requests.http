@@ -1,11 +1,12 @@
-# Fichier de test des requêtes REST pour Visual Studio Code (Extension REST Client)
-# Variable globale
+# VS Code REST Client - CampusEats API Test Suite
+
+### Global variables
 @baseUrl = http://localhost:3000
 
 ### 1. Healthcheck
 GET {{baseUrl}}/health
 
-### 2. Inscription d'un étudiant (Public)
+### 2. Register Student (Public)
 # @name registerStudent
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
@@ -17,8 +18,8 @@ Content-Type: application/json
   "phone": "0601020304"
 }
 
-### 3. Connexion
-# @name login
+### 3. Login Student
+# @name loginStudent
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -27,15 +28,22 @@ Content-Type: application/json
   "password": "Password123!"
 }
 
-### Sauvegarde des jetons depuis la réponse de login
-@accessToken = {{login.response.body.data.accessToken}}
-@refreshToken = {{login.response.body.data.refreshToken}}
+### Extract tokens from login response
+@accessToken = {{loginStudent.response.body.data.accessToken}}
+@refreshToken = {{loginStudent.response.body.data.refreshToken}}
 
-### 4. Consulter son profil (/me) - Connecté
+### 4. List Time Slots (obtenir un ID valide)
+# @name listTimeSlots
+GET {{baseUrl}}/time-slots
+Authorization: Bearer {{accessToken}}
+
+@someTimeSlotId = {{listTimeSlots.response.body[0]._id}}
+
+### 5. Get Student Profile (/me) - Authenticated
 GET {{baseUrl}}/me
 Authorization: Bearer {{accessToken}}
 
-### 5. Modifier son profil (/me)
+### 6. Update Student Profile (/me)
 PATCH {{baseUrl}}/me
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -45,7 +53,8 @@ Content-Type: application/json
   "phone": "0699887766"
 }
 
-### 6. Rotation du Refresh Token (Renouvellement)
+### 7. Refresh Token
+# @name refreshTokenRequest
 POST {{baseUrl}}/auth/refresh
 Content-Type: application/json
 
@@ -53,7 +62,59 @@ Content-Type: application/json
   "refreshToken": "{{refreshToken}}"
 }
 
-### 7. Test de sécurité : tentative d'accéder à la route Admin avec un compte étudiant (doit retourner 403 Forbidden)
+### Extract new access token (optionnel)
+@accessToken = {{refreshTokenRequest.response.body.data.accessToken}}
+
+### 8. Create Order
+# @name createOrder
+POST {{baseUrl}}/orders
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "timeSlotId": "{{someTimeSlotId}}",
+  "items": [
+    { "name": "Pizza Margherita", "quantity": 1 },
+    { "name": "Salade César", "quantity": 2 }
+  ]
+}
+
+### Capture created order ID
+@orderId = {{createOrder.response.body._id}}
+
+### 9. List Student Orders
+GET {{baseUrl}}/orders
+Authorization: Bearer {{accessToken}}
+
+### 10. Cancel Own Order
+POST {{baseUrl}}/orders/{{orderId}}/cancel
+Authorization: Bearer {{accessToken}}
+
+### 11. List Orders for a Time Slot
+GET {{baseUrl}}/time-slots/{{someTimeSlotId}}/orders
+Authorization: Bearer {{accessToken}}
+
+### 12. Update Order Status (e.g., mark as "ready")
+PATCH {{baseUrl}}/orders/{{orderId}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "status": "ready"
+}
+
+### 13. Register Device (e.g., push notification token)
+# @name registerDevice
+POST {{baseUrl}}/devices
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "deviceToken": "sample-device-token-123",
+  "platform": "android"
+}
+
+### 14. Security Test: Student tries to access admin route (expect 403)
 POST {{baseUrl}}/admin/users
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -65,7 +126,7 @@ Content-Type: application/json
   "role": "personnel"
 }
 
-### 8. Déconnexion (révoque la session)
+### 15. Logout (revoke refresh token)
 POST {{baseUrl}}/auth/logout
 Content-Type: application/json
 
