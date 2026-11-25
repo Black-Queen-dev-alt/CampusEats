@@ -7,6 +7,9 @@ import { authRoutes } from './modules/auth/auth.routes';
 import { userRoutes } from './modules/users/user.routes';
 import { dishRoutes } from './modules/dishes/dish.routes';
 import { menuRoutes } from './modules/menus/menu.routes';
+import { timeSlotRoutes } from './modules/time-slots/time-slot.routes';
+import ordersRouter from './routes/orders';
+import devicesRouter from './routes/devices';
 
 export const app = express();
 
@@ -35,22 +38,14 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 4. Routes des modules
+// 4. Routes des modules (Tout le monde connecté !)
 app.use('/auth', authRoutes);
-import ordersRouter from './routes/orders';
-import devicesRouter from './routes/devices';
-app.use('/orders', ordersRouter);
-app.use('/devices', devicesRouter);
-
 app.use('/', userRoutes);
-
-// Modules du Développeur 2
 app.use('/dishes', dishRoutes);
 app.use('/menus', menuRoutes);
-
-// Futurs modules de vos camarades (Développeurs 3 et 4)
-// app.use('/time-slots', timeSlotRoutes);
-// app.use('/orders', orderRoutes);
+app.use('/time-slots', timeSlotRoutes);
+app.use('/orders', ordersRouter);
+app.use('/devices', devicesRouter);
 
 // 5. Gestionnaire d'erreurs centralisé unique (Exigence A5)
 app.use(errorHandler);

@@ -1,0 +1,66 @@
+import mongoose from "mongoose";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { AppError } from "../src/common/errors/app-error";
+import { TimeSlot } from "../src/modules/time-slots/time-slot.model";
+import { reserveSlotAtomically } from "../src/modules/time-slots/time-slot.service";
+
+const mongoUri = process.env.TIME_SLOT_TEST_MONGO_URI;
+
+describe.skipIf(!mongoUri)(
+  "TimeSlot atomic concurrency (MongoDB integration)",
+  () => {
+    beforeAll(async () => {
+      await mongoose.connect(mongoUri!);
+      await TimeSlot.init();
+    }, 30_000);
+
+    afterAll(async () => {
+      await mongoose.disconnect();
+    });
+
+    it("ne dépasse jamais la capacité avec 50 réservations simultanées", async () => {
+      const date = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const slot = await TimeSlot.create({
+        date,
+        startTime: "12:00",
+        endTime: "12:15",
+        capacity: 9,
+      });
+
+      try {
+        const results = await Promise.allSettled(
+          Array.from({ length: 50 }, () => reserveSlotAtomically(slot.id)),
+        );
+        const successes = results.filter(
+          (result) => result.status === "fulfilled",
+        );
+        const failures = results.filter(
+          (result) => result.status === "rejected",
+        );
+        const rejectedWithFull = failures.filter(
+          (result) =>
+            result.status === "rejected" &&
+            result.reason instanceof AppError &&
+            result.reason.code === "SLOT_FULL",
+        );
+        const persisted = await TimeSlot.findById(slot.id).orFail();
+
+        expect(successes).toHaveLength(slot.capacity);
+        expect(failures).toHaveLength(50 - slot.capacity);
+        expect(rejectedWithFull).toHaveLength(failures.length);
+        expect(persisted.reservedCount).toBe(slot.capacity);
+        expect(persisted.reservedCount).toBeLessThanOrEqual(persisted.capacity);
+      } finally {
+        await TimeSlot.deleteOne({ _id: slot._id });
+      }
+    }, 30_000);
+  },
+);
+
+if (!mongoUri) {
+  console.warn(
+    "Concurrency test skipped: define TIME_SLOT_TEST_MONGO_URI with a dedicated test database URI.",
+  );
+}
