@@ -7,8 +7,12 @@ export interface DishQueryParams {
   isVegetarian?: string;
   allergen?: string;
   search?: string;
-  page?: string;
-  limit?: string;
+  page?: number | string;
+  limit?: number | string;
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export class DishService {
@@ -32,11 +36,15 @@ export class DishService {
     }
 
     if (query.search) {
-      filter.name = { $regex: query.search.trim(), $options: 'i' };
+      filter.name = { $regex: escapeRegex(query.search.trim()), $options: 'i' };
     }
 
-    const page = Math.max(1, parseInt(query.page || '1', 10));
-    const limit = Math.min(Math.max(1, parseInt(query.limit || '20', 10)), 50); // Capped at 50
+    const page = Number(query.page ?? 1);
+    const requestedLimit = Number(query.limit ?? 20);
+    if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(requestedLimit) || requestedLimit < 1) {
+      throw AppError.badRequest('Les paramètres de pagination sont invalides.');
+    }
+    const limit = Math.min(requestedLimit, 50);
     const skip = (page - 1) * limit;
 
     const [dishes, total] = await Promise.all([
@@ -55,8 +63,10 @@ export class DishService {
     };
   }
 
-  static async getDishById(id: string): Promise<IDish> {
-    const dish = await Dish.findById(id);
+  static async getDishById(id: string, includeInactive = false): Promise<IDish> {
+    const filter: Record<string, unknown> = { _id: id };
+    if (!includeInactive) filter.isActive = true;
+    const dish = await Dish.findOne(filter);
     if (!dish) {
       throw AppError.notFound('Plat introuvable');
     }
@@ -65,7 +75,7 @@ export class DishService {
 
   static async createDish(data: CreateDishDTO): Promise<IDish> {
     const existing = await Dish.findOne({
-      name: { $regex: new RegExp(`^${data.name.trim()}$`, 'i') },
+      name: { $regex: new RegExp(`^${escapeRegex(data.name.trim())}$`, 'i') },
     });
 
     if (existing) {
@@ -80,7 +90,7 @@ export class DishService {
     if (data.name) {
       const existing = await Dish.findOne({
         _id: { $ne: id },
-        name: { $regex: new RegExp(`^${data.name.trim()}$`, 'i') },
+        name: { $regex: new RegExp(`^${escapeRegex(data.name.trim())}$`, 'i') },
       });
       if (existing) {
         throw AppError.conflict(`Un autre plat nommé "${data.name}" existe déjà.`);

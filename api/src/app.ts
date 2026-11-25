@@ -8,7 +8,7 @@ import { userRoutes } from './modules/users/user.routes';
 import { dishRoutes } from './modules/dishes/dish.routes';
 import { menuRoutes } from './modules/menus/menu.routes';
 import { timeSlotRoutes } from './modules/time-slots/time-slot.routes';
-import ordersRouter from './routes/orders';
+import ordersRouter, { slotOrdersRouter } from './routes/orders';
 import devicesRouter from './routes/devices';
 
 export const app = express();
@@ -44,6 +44,7 @@ app.use('/', userRoutes);
 app.use('/dishes', dishRoutes);
 app.use('/menus', menuRoutes);
 app.use('/time-slots', timeSlotRoutes);
+app.use('/time-slots', slotOrdersRouter);
 app.use('/orders', ordersRouter);
 app.use('/devices', devicesRouter);
 

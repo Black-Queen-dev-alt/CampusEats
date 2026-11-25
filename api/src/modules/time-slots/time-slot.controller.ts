@@ -4,8 +4,17 @@ import { TimeSlotService } from "./time-slot.service";
 export class TimeSlotController {
   static async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const slots = await TimeSlotService.listByDate(req.query.date as string);
-      res.status(200).json({ success: true, data: slots });
+      const { date, page, limit } = req.query as unknown as {
+        date: string;
+        page: number;
+        limit: number;
+      };
+      const result = await TimeSlotService.listByDate(date, page, limit);
+      res.status(200).json({
+        success: true,
+        data: result.slots,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(error);
     }

@@ -1,135 +1,143 @@
-# VS Code REST Client - CampusEats API Test Suite
-
-### Global variables
+# VS Code REST Client — CampusEats API
+# Définir une date future et disposer d’un serveur MongoDB seedé.
 @baseUrl = http://localhost:3000
+@pickupDate = 2026-12-15
 
-### 1. Healthcheck
+### Santé de l’API
 GET {{baseUrl}}/health
 
-### 2. Register Student (Public)
-# @name registerStudent
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "email": "etudiant.test@univ-campus.fr",
-  "password": "Password123!",
-  "fullName": "Thomas Dubois",
-  "phone": "0601020304"
-}
-
-### 3. Login Student
-# @name loginStudent
+### Connexion admin
+# @name adminLogin
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "etudiant.test@univ-campus.fr",
-  "password": "Password123!"
+  "email": "admin@campuseats.univ.edu",
+  "password": "Admin1234!"
 }
 
-### Extract tokens from login response
-@accessToken = {{loginStudent.response.body.data.accessToken}}
-@refreshToken = {{loginStudent.response.body.data.refreshToken}}
+@adminAccessToken = {{adminLogin.response.body.data.accessToken}}
 
-### 4. List Time Slots (obtenir un ID valide)
-# @name listTimeSlots
-GET {{baseUrl}}/time-slots
-Authorization: Bearer {{accessToken}}
+### Lister les plats et choisir le premier
+# @name listDishes
+GET {{baseUrl}}/dishes?page=1&limit=20
+Authorization: Bearer {{adminAccessToken}}
 
-@someTimeSlotId = {{listTimeSlots.response.body[0]._id}}
+@dishId = {{listDishes.response.body.data[0].id}}
 
-### 5. Get Student Profile (/me) - Authenticated
-GET {{baseUrl}}/me
-Authorization: Bearer {{accessToken}}
-
-### 6. Update Student Profile (/me)
-PATCH {{baseUrl}}/me
-Authorization: Bearer {{accessToken}}
+### Créer le menu de retrait
+# @name createMenu
+POST {{baseUrl}}/menus
+Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 {
-  "fullName": "Thomas D. Modifié",
-  "phone": "0699887766"
+  "date": "{{pickupDate}}",
+  "items": [
+    {
+      "dishId": "{{dishId}}",
+      "isAvailable": true,
+      "dailyStockLimit": 50
+    }
+  ],
+  "isPublished": true
 }
 
-### 7. Refresh Token
-# @name refreshTokenRequest
+@menuId = {{createMenu.response.body.data.id}}
+
+### Créer un créneau de retrait
+# @name createTimeSlot
+POST {{baseUrl}}/time-slots
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "date": "{{pickupDate}}",
+  "startTime": "12:00",
+  "endTime": "12:15",
+  "capacity": 20
+}
+
+@slotId = {{createTimeSlot.response.body.data.id}}
+
+### Connexion étudiant
+# @name studentLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@campuseats.univ.edu",
+  "password": "Student1234!"
+}
+
+@studentAccessToken = {{studentLogin.response.body.data.accessToken}}
+@studentRefreshToken = {{studentLogin.response.body.data.refreshToken}}
+
+### Créer une commande
+# @name createOrder
+POST {{baseUrl}}/orders
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+{
+  "menuId": "{{menuId}}",
+  "slotId": "{{slotId}}",
+  "lines": [
+    {
+      "dishId": "{{dishId}}",
+      "quantity": 1
+    }
+  ]
+}
+
+@orderId = {{createOrder.response.body.data.id}}
+
+### Consulter son historique paginé
+GET {{baseUrl}}/orders?page=1&limit=20
+Authorization: Bearer {{studentAccessToken}}
+
+### Annuler sa commande avant le début du créneau
+POST {{baseUrl}}/orders/{{orderId}}/cancel
+Authorization: Bearer {{studentAccessToken}}
+
+### Reconnexion personnel
+# @name staffLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@campuseats.univ.edu",
+  "password": "Staff1234!"
+}
+
+@staffAccessToken = {{staffLogin.response.body.data.accessToken}}
+
+### Consulter les commandes du créneau
+GET {{baseUrl}}/time-slots/{{slotId}}/orders?page=1&limit=20
+Authorization: Bearer {{staffAccessToken}}
+
+### Enregistrer le jeton FCM de l’étudiant
+POST {{baseUrl}}/devices
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+{
+  "fcmToken": "remplacer-par-un-jeton-fcm-reel"
+}
+
+### Rotation du refresh token étudiant
+# @name refreshStudent
 POST {{baseUrl}}/auth/refresh
 Content-Type: application/json
 
 {
-  "refreshToken": "{{refreshToken}}"
+  "refreshToken": "{{studentRefreshToken}}"
 }
 
-### Extract new access token (optionnel)
-@accessToken = {{refreshTokenRequest.response.body.data.accessToken}}
-
-### 8. Create Order
-# @name createOrder
-POST {{baseUrl}}/orders
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "timeSlotId": "{{someTimeSlotId}}",
-  "items": [
-    { "name": "Pizza Margherita", "quantity": 1 },
-    { "name": "Salade César", "quantity": 2 }
-  ]
-}
-
-### Capture created order ID
-@orderId = {{createOrder.response.body._id}}
-
-### 9. List Student Orders
-GET {{baseUrl}}/orders
-Authorization: Bearer {{accessToken}}
-
-### 10. Cancel Own Order
-POST {{baseUrl}}/orders/{{orderId}}/cancel
-Authorization: Bearer {{accessToken}}
-
-### 11. List Orders for a Time Slot
-GET {{baseUrl}}/time-slots/{{someTimeSlotId}}/orders
-Authorization: Bearer {{accessToken}}
-
-### 12. Update Order Status (e.g., mark as "ready")
-PATCH {{baseUrl}}/orders/{{orderId}}/status
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "status": "ready"
-}
-
-### 13. Register Device (e.g., push notification token)
-# @name registerDevice
-POST {{baseUrl}}/devices
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "deviceToken": "sample-device-token-123",
-  "platform": "android"
-}
-
-### 14. Security Test: Student tries to access admin route (expect 403)
-POST {{baseUrl}}/admin/users
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "email": "chef.cuisine@univ-campus.fr",
-  "password": "ChefPassword123!",
-  "fullName": "Chef Pierre",
-  "role": "personnel"
-}
-
-### 15. Logout (revoke refresh token)
+### Déconnexion et révocation du refresh token renouvelé
 POST {{baseUrl}}/auth/logout
 Content-Type: application/json
 
 {
-  "refreshToken": "{{refreshToken}}"
+  "refreshToken": "{{refreshStudent.response.body.data.refreshToken}}"
 }

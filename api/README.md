@@ -1,60 +1,72 @@
 # CampusEats API
 
-## Description
-API REST Node.js/Express 5 avec MongoDB pour l'application CampusEats. Ce projet implémente les modules **orders** et **devices** ainsi que les notifications push Firebase (FCM).
+API REST du sujet T1 : Node.js 24+, Express 5, TypeScript, MongoDB et Mongoose.
 
-## Prérequis
-- **Node.js** (v20 ou supérieur) et **npm** installés.
-- Une base MongoDB (le projet utilise `mongodb-memory-server` pour les tests ; pour le développement, configurez `MONGODB_URI` dans `.env`).
-- **Clé de service Firebase** (fichier JSON) pour les notifications push.
+## Prérequis et lancement
 
-## Installation
+- Node.js 24 ou plus récent et npm.
+- MongoDB local ou MongoDB Atlas.
+- Firebase est facultatif en local ; il est requis pour envoyer réellement les notifications push.
+
+Dans PowerShell :
+
 ```powershell
-cd C:\Users\Congo\OneDrive\Desktop\CampusEats\CampusEats\api
-npm install
+Copy-Item .env.example .env
+npm ci
+npm run seed
+npm run dev
 ```
 
-## Configuration Firebase
-1. Dans la console Firebase, créez un compte de service et téléchargez le fichier JSON.
-2. Copiez‑le dans le répertoire `api/` sous le nom **`firebase-service-key.json`**.
-3. Le fichier est déjà listé dans `.gitignore` afin qu’il ne soit pas versionné.
+Le seed est idempotent et n’efface pas les données existantes. Il crée les comptes de démonstration ci-dessous uniquement s’ils n’existent pas déjà. Ne les utilisez jamais en production.
 
-## Scripts utiles
-- **Démarrer le serveur en mode développement**
-  ```powershell
-  npm run dev   # ou `pnpm dev` si vous utilisez pnpm
-  ```
-- **Exécuter les tests**
-  ```powershell
-  npm test
-  ```
-- **Lancer les tests en mode « watch »**
-  ```powershell
-  npm run test:watch
-  ```
+| Rôle | Email | Mot de passe |
+|---|---|---|
+| Admin | `admin@campuseats.univ.edu` | `Admin1234!` |
+| Personnel | `staff@campuseats.univ.edu` | `Staff1234!` |
+| Étudiant | `student@campuseats.univ.edu` | `Student1234!` |
+| Étudiant | `student2@campuseats.univ.edu` | `Student1234!` |
 
-## Endpoints principaux
-| Méthode | URL | Description |
-|--------|-----|-------------|
-| `POST` | `/orders` | Crée une nouvelle commande |
-| `GET`  | `/orders` | Liste toutes les commandes |
-| `POST` | `/orders/:id/cancel` | Annule une commande et libère la place |
-| `GET`  | `/time‑slots/:id/orders` | Récupère les commandes d’un créneau horaire |
-| `PATCH`| `/orders/:id/status` | Met à jour le statut (received → preparing → ready → withdrawn) |
-| `POST` | `/devices` | Enregistre un appareil pour les notifications |
+`MONGO_URI`, les deux secrets JWT et les durées des jetons sont validés au démarrage. Ne versionnez jamais `.env` ni une clé Firebase.
 
-## Workflow des commandes
-1. **received** – la commande vient d’être créée.
-2. **preparing** – le repas est en cours de préparation.
-3. **ready** – le repas est prêt ; une notification push est envoyée via Firebase.
-4. **withdrawn** – le repas a été retiré par l’utilisateur.
+## Endpoints
 
-## Gestion des vulnérabilités
-Après l’installation, vous pouvez auditer les dépendances :
+Toutes les réponses d’erreur métier suivent `{ "success": false, "error": { "code", "message", "details" } }`. Les corps, paramètres et filtres de requête sont validés par Zod ; les clés inconnues sont supprimées. Les listes sont paginées (`page`, `limit`, maximum 50).
+
+| Méthode | Chemin | Accès |
+|---|---|---|
+| `POST` | `/auth/register` | Public, crée un compte étudiant |
+| `POST` | `/auth/login` | Public |
+| `POST` | `/auth/refresh` | Public, rotation à usage unique |
+| `POST` | `/auth/logout` | Public, révoque le refresh token fourni |
+| `GET`, `PATCH` | `/me` | Utilisateur authentifié, son propre profil |
+| `POST` | `/admin/users` | Admin |
+| `PATCH` | `/admin/users/:id/status` | Admin |
+| `GET` | `/dishes` | Authentifié, plats actifs ; recherche et filtres |
+| `GET` | `/dishes/:id` | Authentifié ; les plats inactifs sont réservés à l’admin |
+| `POST`, `PATCH` | `/dishes`, `/dishes/:id` | Admin |
+| `GET` | `/menus?date=YYYY-MM-DD` | Authentifié ; menus non publiés visibles par le personnel et l’admin |
+| `POST`, `PATCH` | `/menus`, `/menus/:id` | Admin |
+| `GET` | `/time-slots?date=YYYY-MM-DD` | Authentifié |
+| `POST`, `PATCH` | `/time-slots`, `/time-slots/:id` | Admin |
+| `POST`, `GET` | `/orders` | Étudiant ; création et historique personnel |
+| `POST` | `/orders/:id/cancel` | Étudiant propriétaire de la commande |
+| `GET` | `/time-slots/:id/orders` | Personnel ou admin |
+| `PATCH` | `/orders/:id/status` | Personnel ou admin |
+| `POST` | `/devices` | Utilisateur authentifié ; enregistre son jeton FCM |
+| `GET` | `/health` | Public |
+
+Les commandes réservent atomiquement la capacité du créneau et le stock journalier du menu. Les annulations admissibles libèrent ces réservations.
+
+## Vérification
+
 ```powershell
-npm audit   # afficher les vulnérabilités
-npm audit fix --force   # appliquer les correctifs (attention aux ruptures possibles)
+npm run lint
+npm run build
+npm test
 ```
 
----
-*Ce README sera versionné dans la branche `feat/api-orders`.*
+Les tests d’intégration de concurrence et d’authentification utilisent des instances MongoDB temporaires isolées. La CI GitHub Actions fournit également MongoDB pour la suite utilisant `MONGO_URI`.
+
+## Documentation de requêtes
+
+Les exemples du client REST VS Code se trouvent dans [`requests.http`](./requests.http).

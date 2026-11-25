@@ -13,56 +13,79 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     studentId: new Types.ObjectId(studentId),
     slotId: new Types.ObjectId(slotId),
     menuId: new Types.ObjectId(menuId),
-    lines,
+    lines: lines.map((line: { dishId: string; quantity: number }) => ({
+      dishId: new Types.ObjectId(line.dishId),
+      quantity: line.quantity,
+    })),
   });
-  res.status(201).json(order);
+  res.status(201).json({ success: true, data: order });
 });
 
 /** GET /orders – historique paginé de l'étudiant */
 export const getMyOrders = asyncHandler(async (req: Request, res: Response) => {
   const studentId = req.user!.id;
-  const { page = 1, limit = 20 } = req.query as any;
+  const { page, limit } = req.query as unknown as { page: number; limit: number };
   const result = await OrderService.getStudentOrders({
     studentId: new Types.ObjectId(studentId),
-    page: Number(page),
-    limit: Number(limit),
+    page,
+    limit,
   });
-  res.json(result);
+  res.status(200).json({
+    success: true,
+    data: result.orders,
+    pagination: {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: Math.ceil(result.total / result.limit),
+    },
+  });
 });
 
 /** POST /orders/:id/cancel – annulation par le propriétaire */
 export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
   const requesterId = req.user!.id;
   const orderId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  await OrderService.cancelOrder({
+  const order = await OrderService.cancelOrder({
     orderId: new Types.ObjectId(orderId),
     requesterId: new Types.ObjectId(requesterId),
   });
-  res.status(200).json({ message: 'Order cancelled' });
+  res.status(200).json({ success: true, data: order });
 });
 
 /** GET /time-slots/:id/orders – vue du personnel */
 export const getSlotOrders = asyncHandler(async (req: Request, res: Response) => {
-  const { status, page = 1, limit = 20 } = req.query as any;
+  const { status, page, limit } = req.query as unknown as {
+    status?: string;
+    page: number;
+    limit: number;
+  };
   const slotId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const result = await OrderService.getSlotOrders({
     slotId: new Types.ObjectId(slotId),
     status: status as string | undefined,
-    page: Number(page),
-    limit: Number(limit),
+    page,
+    limit,
   });
-  res.json(result);
+  res.status(200).json({
+    success: true,
+    data: result.orders,
+    pagination: {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: Math.ceil(result.total / result.limit),
+    },
+  });
 });
 
 /** PATCH /orders/:id/status – changement de statut (personnel) */
 export const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
-  const requesterId = req.user!.id;
   const { status: newStatus } = req.body;
   const orderId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const order = await OrderService.updateStatus({
     orderId: new Types.ObjectId(orderId),
     newStatus,
-    requesterId: new Types.ObjectId(requesterId),
   });
-  res.json(order);
+  res.status(200).json({ success: true, data: order });
 });

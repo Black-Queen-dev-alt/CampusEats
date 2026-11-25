@@ -5,6 +5,7 @@ export interface IMenuItem {
   dishId: Types.ObjectId | IDish;
   isAvailable: boolean;
   dailyStockLimit?: number;
+  dailyStockUsed: number;
 }
 
 export interface IMenu extends Document {
@@ -29,6 +30,12 @@ const MenuItemSchema = new Schema<IMenuItem>(
     dailyStockLimit: {
       type: Number,
       min: 0,
+    },
+    dailyStockUsed: {
+      type: Number,
+      min: 0,
+      default: 0,
+      validate: Number.isInteger,
     },
   },
   { _id: false }

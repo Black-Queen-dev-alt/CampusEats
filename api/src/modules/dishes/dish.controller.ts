@@ -18,7 +18,7 @@ export class DishController {
   static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const dish = await DishService.getDishById(id);
+      const dish = await DishService.getDishById(id, req.user?.role === 'admin');
       res.status(200).json({
         success: true,
         data: dish,

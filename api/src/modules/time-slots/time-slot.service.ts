@@ -16,13 +16,26 @@ function isBookable(slot: Pick<ITimeSlot, 'date' | 'startTime'>) {
 }
 
 export class TimeSlotService {
-  static async listByDate(date: string) {
-    const slots = await TimeSlot.find({ date }).sort({ startTime: 1 }).lean();
-    return slots.map((slot) => ({
-      ...slot,
-      id: slot._id.toString(),
-      remainingPlaces: Math.max(0, slot.capacity - slot.reservedCount),
-    }));
+  static async listByDate(date: string, page: number, limit: number) {
+    const filter = { date };
+    const skip = (page - 1) * limit;
+    const [slots, total] = await Promise.all([
+      TimeSlot.find(filter).sort({ startTime: 1 }).skip(skip).limit(limit).lean(),
+      TimeSlot.countDocuments(filter),
+    ]);
+    return {
+      slots: slots.map((slot) => ({
+        ...slot,
+        id: slot._id.toString(),
+        remainingPlaces: Math.max(0, slot.capacity - slot.reservedCount),
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   static async create(input: CreateTimeSlotDTO): Promise<ITimeSlot> {
@@ -40,6 +53,17 @@ export class TimeSlotService {
     const current = await TimeSlot.findById(id);
     if (!current) throw AppError.notFound('Créneau introuvable.');
 
+    const movingSlot =
+      (input.date !== undefined && input.date !== current.date) ||
+      (input.startTime !== undefined && input.startTime !== current.startTime) ||
+      (input.endTime !== undefined && input.endTime !== current.endTime);
+    if (movingSlot && current.reservedCount > 0) {
+      throw AppError.conflict(
+        'Un créneau avec des commandes ne peut pas être déplacé.',
+        'SLOT_HAS_RESERVATIONS',
+      );
+    }
+
     const nextStartTime = input.startTime ?? current.startTime;
     const nextEndTime = input.endTime ?? current.endTime;
     if (nextStartTime >= nextEndTime) {
@@ -47,6 +71,7 @@ export class TimeSlotService {
     }
 
     const filter: Record<string, unknown> = { _id: id };
+    if (movingSlot) filter.reservedCount = 0;
     if (input.capacity !== undefined) {
       // La capacité ne peut jamais être abaissée sous le nombre déjà réservé.
       filter.$expr = { $lte: ['$reservedCount', input.capacity] };
@@ -61,6 +86,12 @@ export class TimeSlotService {
 
       const stillExists = await TimeSlot.exists({ _id: id });
       if (!stillExists) throw AppError.notFound('Créneau introuvable.');
+      if (movingSlot) {
+        throw AppError.conflict(
+          'Le créneau a reçu une commande pendant sa modification et ne peut pas être déplacé.',
+          'SLOT_HAS_RESERVATIONS',
+        );
+      }
       throw AppError.conflict('La capacité ne peut pas être inférieure aux réservations existantes.', 'CAPACITY_BELOW_RESERVED');
     } catch (error) {
       if (isDuplicateKeyError(error)) {

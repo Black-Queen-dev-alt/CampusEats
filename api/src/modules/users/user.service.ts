@@ -12,7 +12,10 @@ export class UserService {
   }
 
   static async updateProfile(userId: string, dto: UpdateProfileDTO) {
-    const user = await User.findByIdAndUpdate(userId, dto, { new: true });
+    const user = await User.findByIdAndUpdate(userId, dto, {
+      new: true,
+      runValidators: true,
+    });
     if (!user) throw AppError.notFound('Utilisateur introuvable.');
     return user;
   }
@@ -40,7 +43,7 @@ export class UserService {
     const user = await User.findByIdAndUpdate(
       userId,
       { status: dto.status },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!user) throw AppError.notFound('Utilisateur introuvable.');
