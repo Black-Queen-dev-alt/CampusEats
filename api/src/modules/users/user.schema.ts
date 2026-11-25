@@ -12,14 +12,14 @@ export const createStaffOrAdminSchema = z.object({
   password: z.string().min(6, 'Mot de passe minimum 6 caractères'),
   fullName: z.string().min(2, 'Nom complet requis').trim(),
   role: z.enum(['personnel', 'admin'], {
-    errorMap: () => ({ message: 'Le rôle doit être personnel ou admin' }),
+    error: 'Le rôle doit être personnel ou admin',
   }),
   phone: z.string().optional(),
 });
 
 export const updateUserStatusSchema = z.object({
   status: z.enum(['actif', 'suspendu'], {
-    errorMap: () => ({ message: 'Le statut doit être actif ou suspendu' }),
+    error: 'Le statut doit être actif ou suspendu',
   }),
 });
 

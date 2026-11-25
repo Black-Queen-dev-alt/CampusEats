@@ -5,7 +5,7 @@ export const createDishSchema = z.object({
   description: z.string().min(5, 'La description doit comporter au moins 5 caractères').trim(),
   priceInCents: z.number().int('Le prix doit être un nombre entier').min(0, 'Le prix ne peut pas être négatif'),
   category: z.enum(['entree', 'plat', 'dessert', 'boisson'], {
-    errorMap: () => ({ message: 'Catégorie invalide (entree, plat, dessert, boisson)' }),
+    error: 'Catégorie invalide (entree, plat, dessert, boisson)',
   }),
   photoUrl: z.string().url('Format URL invalide').optional().nullable(),
   allergens: z.array(z.string().toLowerCase().trim()).default([]),
