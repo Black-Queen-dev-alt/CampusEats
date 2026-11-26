@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   createOrder,
+  getMyOrder,
   getMyOrders,
   cancelOrder,
   getSlotOrders,
@@ -24,6 +25,14 @@ router.post('/', ...authorize(['etudiant']), validate(createOrderSchema), create
 
 /* Étudiant – historique paginé */
 router.get('/', ...authorize(['etudiant']), validateQuery(listOrdersQuerySchema), getMyOrders);
+
+/* Étudiant – détail de sa propre commande */
+router.get(
+  '/:id',
+  ...authorize(['etudiant']),
+  validateParams(orderIdParamsSchema),
+  getMyOrder,
+);
 
 /* Étudiant – annuler sa propre commande */
 router.post(

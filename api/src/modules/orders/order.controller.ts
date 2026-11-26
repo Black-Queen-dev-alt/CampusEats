@@ -42,6 +42,17 @@ export const getMyOrders = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+/** GET /orders/:id – détail d’une commande appartenant à l’étudiant */
+export const getMyOrder = asyncHandler(async (req: Request, res: Response) => {
+  const studentId = req.user!.id;
+  const orderId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const order = await OrderService.getStudentOrder({
+    orderId: new Types.ObjectId(orderId),
+    studentId: new Types.ObjectId(studentId),
+  });
+  res.status(200).json({ success: true, data: order });
+});
+
 /** POST /orders/:id/cancel – annulation par le propriétaire */
 export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
   const requesterId = req.user!.id;

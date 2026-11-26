@@ -69,4 +69,4 @@ Les tests d’intégration de concurrence et d’authentification utilisent des 
 
 ## Documentation de requêtes
 
-Les exemples du client REST VS Code se trouvent dans [`requests.http`](./requests.http).
+La documentation détaillée des routes, paramètres, rôles et corps JSON se trouve dans [`API.md`](./API.md). Les exemples du client REST VS Code se trouvent dans [`requests.http`](./requests.http).

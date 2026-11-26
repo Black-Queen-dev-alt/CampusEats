@@ -22,6 +22,10 @@ export interface GetStudentOrdersParams {
   page: number;
   limit: number;
 }
+export interface GetStudentOrderParams {
+  orderId: Types.ObjectId;
+  studentId: Types.ObjectId;
+}
 export interface CancelOrderParams {
   orderId: Types.ObjectId;
   requesterId: Types.ObjectId;
@@ -57,13 +61,16 @@ export const OrderService = {
     const menuDishIds = menu.items.map((item) =>
       item.dishId instanceof Types.ObjectId ? item.dishId : item.dishId._id,
     );
-    const activeDishes = await Dish.countDocuments({
+    const dishes = await Dish.find({
       _id: { $in: [...quantitiesByDish.values()].map(({ dishId }) => dishId) },
       isActive: true,
-    });
-    if (activeDishes !== quantitiesByDish.size) {
+    })
+      .select('_id name priceInCents')
+      .lean();
+    if (dishes.length !== quantitiesByDish.size) {
       throw AppError.unprocessable('Un ou plusieurs plats sont introuvables ou inactifs.');
     }
+    const dishesById = new Map(dishes.map((dish) => [dish._id.toString(), dish]));
 
     for (const { dishId } of quantitiesByDish.values()) {
       if (!menuDishIds.some((menuDishId) => menuDishId.equals(dishId))) {
@@ -74,6 +81,17 @@ export const OrderService = {
         );
       }
     }
+    const orderLines = lines.map((line) => {
+      const dish = dishesById.get(line.dishId.toHexString());
+      if (!dish) {
+        throw AppError.unprocessable('Un ou plusieurs plats sont introuvables ou inactifs.');
+      }
+      return {
+        ...line,
+        dishName: dish.name,
+        unitPriceInCents: dish.priceInCents,
+      };
+    });
 
     const slot = await reserveSlotAtomically(slotId.toHexString());
     if (slot.date !== menu.date) {
@@ -91,7 +109,7 @@ export const OrderService = {
         await reserveMenuStockAtomically(menuId, reservation.dishId, reservation.quantity);
         reservedDishes.push(reservation);
       }
-      return await Order.create({ studentId, slotId, menuId, lines });
+      return await Order.create({ studentId, slotId, menuId, lines: orderLines });
     } catch (error) {
       for (const reservation of reservedDishes) {
         await releaseMenuStock(menuId, reservation.dishId, reservation.quantity);
@@ -109,10 +127,47 @@ export const OrderService = {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
+        .populate('slotId', 'date startTime endTime')
         .lean(),
       Order.countDocuments({ studentId }),
     ]);
-    return { orders, total, page, limit };
+    return {
+      orders: orders.map((order) => ({
+        ...order,
+        canCancel: this.canCancel(order.status, order.slotId),
+      })),
+      total,
+      page,
+      limit,
+    };
+  },
+
+  /** Récupère une commande appartenant à l'étudiant connecté. */
+  async getStudentOrder({ orderId, studentId }: GetStudentOrderParams) {
+    const order = await Order.findOne({ _id: orderId, studentId })
+      .populate('slotId', 'date startTime endTime')
+      .lean();
+    if (!order) throw AppError.notFound('Commande introuvable.');
+    return {
+      ...order,
+      canCancel: this.canCancel(order.status, order.slotId),
+    };
+  },
+
+  canCancel(status: OrderStatus, slot: unknown) {
+    if (status !== 'received' && status !== 'preparing') return false;
+    if (slot === null || typeof slot !== 'object') return false;
+    const slotDetails = slot as Record<string, unknown>;
+    if (
+      typeof slotDetails.date !== 'string' ||
+      typeof slotDetails.startTime !== 'string'
+    ) {
+      return false;
+    }
+    const deadline = new Date(
+      `${slotDetails.date}T${slotDetails.startTime}:00.000Z`,
+    );
+    return deadline.getTime() > Date.now();
   },
 
   /** Annule une commande (seul le propriétaire peut le faire) */
