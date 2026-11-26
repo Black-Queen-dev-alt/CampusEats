@@ -12,6 +12,7 @@ abstract class OrdersRepository {
   Future<OrdersPageResult> getOrders({required int page, required int limit});
   Future<OrderResult> getOrder(String id);
   Future<OrderResult> createOrder({
+    required String menuId,
     required String timeSlotId,
     required List<OrderItem> items,
   });

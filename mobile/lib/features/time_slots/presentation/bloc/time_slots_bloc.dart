@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:campus_eats_mobile/features/time_slots/domain/get_time_slots.dart';
 
 import 'time_slots_event.dart';
@@ -8,8 +9,7 @@ class TimeSlotsBloc extends Bloc<TimeSlotsEvent, TimeSlotsState> {
   TimeSlotsBloc({required GetTimeSlots getTimeSlots})
     : _getTimeSlots = getTimeSlots,
       super(const TimeSlotsLoading()) {
-    on<TimeSlotsRequested>(_onLoad);
-    on<SlotRefreshRequested>(_onLoad);
+    on<TimeSlotsEvent>(_onLoad, transformer: restartable());
   }
 
   final GetTimeSlots _getTimeSlots;

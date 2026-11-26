@@ -68,6 +68,7 @@ class MockOrdersRepository implements OrdersRepository {
 
   @override
   Future<OrderResult> createOrder({
+    required String menuId,
     required String timeSlotId,
     required List<OrderItem> items,
   }) async {
@@ -77,6 +78,7 @@ class MockOrdersRepository implements OrdersRepository {
         value: null,
         failure: const ConflictFailure(
           'Ce créneau vient d\'être complété. Choisissez-en un autre.',
+          'SLOT_FULL',
         ),
       );
     }

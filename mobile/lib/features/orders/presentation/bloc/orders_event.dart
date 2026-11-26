@@ -18,7 +18,12 @@ class OrderDetailsRequested extends OrdersEvent {
 }
 
 class CreateOrderRequested extends OrdersEvent {
-  const CreateOrderRequested({required this.timeSlotId, required this.items});
+  const CreateOrderRequested({
+    required this.menuId,
+    required this.timeSlotId,
+    required this.items,
+  });
+  final String menuId;
   final String timeSlotId;
   final List<OrderItem> items;
 }

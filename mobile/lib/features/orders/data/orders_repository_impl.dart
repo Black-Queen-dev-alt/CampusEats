@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:campus_eats_mobile/core/errors/error_mapper.dart';
+import 'package:campus_eats_mobile/core/errors/failure.dart';
 import 'package:campus_eats_mobile/features/orders/data/orders_remote_data_source.dart';
 import 'package:campus_eats_mobile/features/orders/domain/order.dart';
 import 'package:campus_eats_mobile/features/orders/domain/orders_repository.dart';
@@ -22,6 +23,12 @@ class OrdersRepositoryImpl implements OrdersRepository {
       );
     } on DioException catch (error) {
       return (value: <Order>[], hasMore: false, failure: mapDioError(error));
+    } on FormatException {
+      return (
+        value: <Order>[],
+        hasMore: false,
+        failure: const ServerFailure('Réponse API commandes invalide'),
+      );
     }
   }
 
@@ -32,30 +39,36 @@ class OrdersRepositoryImpl implements OrdersRepository {
       return (value: dto.toDomain(), failure: null);
     } on DioException catch (error) {
       return (value: null, failure: mapDioError(error));
+    } on FormatException {
+      return (
+        value: null,
+        failure: const ServerFailure('Réponse API commande invalide'),
+      );
     }
   }
 
   @override
   Future<OrderResult> createOrder({
+    required String menuId,
     required String timeSlotId,
     required List<OrderItem> items,
   }) async {
     try {
       final dto = await remote.createOrder(
+        menuId: menuId,
         timeSlotId: timeSlotId,
         items: items
-            .map(
-              (item) => {
-                'name': item.name,
-                'quantity': item.quantity,
-                'unitPrice': item.unitPrice,
-              },
-            )
+            .map((item) => {'dishId': item.dishId, 'quantity': item.quantity})
             .toList(),
       );
       return (value: dto.toDomain(), failure: null);
     } on DioException catch (error) {
       return (value: null, failure: mapDioError(error));
+    } on FormatException {
+      return (
+        value: null,
+        failure: const ServerFailure('Réponse API commande invalide'),
+      );
     }
   }
 
@@ -66,6 +79,11 @@ class OrdersRepositoryImpl implements OrdersRepository {
       return (value: dto.toDomain(), failure: null);
     } on DioException catch (error) {
       return (value: null, failure: mapDioError(error));
+    } on FormatException {
+      return (
+        value: null,
+        failure: const ServerFailure('Réponse API commande invalide'),
+      );
     }
   }
 }

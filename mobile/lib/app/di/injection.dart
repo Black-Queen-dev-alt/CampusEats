@@ -9,11 +9,13 @@ import 'package:campus_eats_mobile/core/network/refresh_coordinator.dart';
 import 'package:campus_eats_mobile/core/storage/secure_token_storage.dart';
 import 'package:campus_eats_mobile/features/auth/data/auth_repository.dart';
 import 'package:campus_eats_mobile/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:campus_eats_mobile/features/time_slots/data/mock_time_slot_repository.dart';
+import 'package:campus_eats_mobile/features/time_slots/data/time_slot_remote_data_source.dart';
+import 'package:campus_eats_mobile/features/time_slots/data/time_slot_repository_impl.dart';
 import 'package:campus_eats_mobile/features/time_slots/domain/get_time_slots.dart';
 import 'package:campus_eats_mobile/features/time_slots/domain/time_slot_repository.dart';
 import 'package:campus_eats_mobile/features/time_slots/presentation/bloc/time_slots_bloc.dart';
-import 'package:campus_eats_mobile/features/orders/data/mock_orders_repository.dart';
+import 'package:campus_eats_mobile/features/orders/data/orders_remote_data_source.dart';
+import 'package:campus_eats_mobile/features/orders/data/orders_repository_impl.dart';
 import 'package:campus_eats_mobile/features/orders/domain/cancel_order.dart';
 import 'package:campus_eats_mobile/features/orders/domain/create_order.dart';
 import 'package:campus_eats_mobile/features/orders/domain/get_order.dart';
@@ -86,11 +88,9 @@ void setupDependencies() {
     ),
   );
 
-  // Mocks temporaires Personne 3 : contractes fidèles, clairement identifiables.
-  // Remplacer ces deux enregistrements par les implémentations Remote
-  // quand les endpoints validés sont disponibles.
+  // Créneaux et commandes : implémentations réelles de l'API CampusEats.
   getIt.registerLazySingleton<TimeSlotRepository>(
-    () => const MockTimeSlotRepository(),
+    () => TimeSlotRepositoryImpl(TimeSlotRemoteDataSource(getIt<ApiClient>())),
   );
   getIt.registerLazySingleton<GetTimeSlots>(
     () => GetTimeSlots(getIt<TimeSlotRepository>()),
@@ -99,7 +99,9 @@ void setupDependencies() {
     () => TimeSlotsBloc(getTimeSlots: getIt<GetTimeSlots>()),
   );
 
-  getIt.registerLazySingleton<OrdersRepository>(() => MockOrdersRepository());
+  getIt.registerLazySingleton<OrdersRepository>(
+    () => OrdersRepositoryImpl(OrdersRemoteDataSource(getIt<ApiClient>())),
+  );
   getIt.registerLazySingleton<GetOrders>(
     () => GetOrders(getIt<OrdersRepository>()),
   );

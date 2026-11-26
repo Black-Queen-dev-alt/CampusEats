@@ -15,9 +15,14 @@ class TimeSlotRemoteDataSource {
     final list = body is Map
         ? (body['data'] ?? body['timeSlots'] ?? body['slots'] ?? body['items'])
         : body;
-    if (list is! List) return const [];
+    if (list is! List) {
+      throw const FormatException('Réponse API créneaux invalide');
+    }
+    if (list.any((item) => item is! Map)) {
+      throw const FormatException('Un créneau de la réponse API est invalide');
+    }
     return list
-        .whereType<Map>()
+        .cast<Map>()
         .map((item) => TimeSlotDto.fromJson(Map<String, dynamic>.from(item)))
         .toList();
   }

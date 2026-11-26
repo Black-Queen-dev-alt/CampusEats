@@ -6,7 +6,12 @@ class CreateOrder {
   final OrdersRepository repository;
 
   Future<OrderResult> call({
+    required String menuId,
     required String timeSlotId,
     required List<OrderItem> items,
-  }) => repository.createOrder(timeSlotId: timeSlotId, items: items);
+  }) => repository.createOrder(
+    menuId: menuId,
+    timeSlotId: timeSlotId,
+    items: items,
+  );
 }

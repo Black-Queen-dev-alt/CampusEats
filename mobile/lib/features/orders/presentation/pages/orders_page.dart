@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:campus_eats_mobile/app/di/injection.dart';
 import 'package:campus_eats_mobile/core/theme/app_spacing.dart';
 import 'package:campus_eats_mobile/core/widgets/state_view.dart';
+import 'package:campus_eats_mobile/features/orders/domain/order.dart';
 import 'package:campus_eats_mobile/features/orders/presentation/bloc/orders_bloc.dart';
 import 'package:campus_eats_mobile/features/orders/presentation/bloc/orders_event.dart';
 import 'package:campus_eats_mobile/features/orders/presentation/bloc/orders_state.dart';
@@ -71,13 +72,27 @@ class _OrdersPageState extends State<OrdersPage> {
                     return false;
                   },
                   child: ListView.builder(
-                    itemCount: list.length + (hasMore ? 1 : 0),
+                    itemCount: list.length + 1,
                     itemBuilder: (context, index) {
                       if (index == list.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(AppSpacing.m),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
+                        if (isLoadingMore) {
+                          return const Padding(
+                            padding: EdgeInsets.all(AppSpacing.m),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (!hasMore) {
+                          return const Padding(
+                            padding: EdgeInsets.all(AppSpacing.m),
+                            child: Center(
+                              child: Text(
+                                'Fin de l’historique',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
                       }
                       final order = list[index];
                       final total =
@@ -108,6 +123,74 @@ class _OrdersPageState extends State<OrdersPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _StatusTimeline extends StatelessWidget {
+  const _StatusTimeline({required this.status});
+
+  final OrderStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    const steps = <(OrderStatus, String)>[
+      (OrderStatus.received, 'Reçue'),
+      (OrderStatus.preparing, 'Préparation'),
+      (OrderStatus.ready, 'Prête'),
+      (OrderStatus.collected, 'Retirée'),
+    ];
+    final activeIndex = switch (status) {
+      OrderStatus.received => 0,
+      OrderStatus.preparing => 1,
+      OrderStatus.ready => 2,
+      OrderStatus.collected => 3,
+      OrderStatus.cancelled || OrderStatus.unknown => -1,
+    };
+    if (status == OrderStatus.cancelled) {
+      return const Text(
+        'Statut : Annulée',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      );
+    }
+    return Row(
+      children: [
+        for (var index = 0; index < steps.length; index++) ...[
+          if (index > 0)
+            Expanded(
+              child: Container(
+                height: 2,
+                color: index <= activeIndex
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).disabledColor,
+              ),
+            ),
+          Expanded(
+            flex: 2,
+            child: Semantics(
+              label: steps[index].$2,
+              child: Column(
+                children: [
+                  Icon(
+                    index <= activeIndex
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: index <= activeIndex
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).disabledColor,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    steps[index].$2,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -177,20 +260,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         Text('Créneau : ${order.timeSlotLabel}'),
                         Text('Statut : ${order.status.label}'),
                         const SizedBox(height: AppSpacing.s),
-                        LinearProgressIndicator(
-                          value: switch (order.status) {
-                            var s
-                                when s == order.status && s.label == 'Reçue' =>
-                              0.33,
-                            var s when s.label == 'En préparation' => 0.66,
-                            var s
-                                when s.label == 'Prête' ||
-                                    s.label == 'Retirée' =>
-                              1,
-                            _ => 0,
-                          },
-                          minHeight: 6,
-                        ),
+                        _StatusTimeline(status: order.status),
                       ],
                     ),
                   ),
@@ -226,7 +296,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                 ],
-                if (order.status.cancellable) ...[
+                if (order.cancellationAllowed || state.isCancelling) ...[
                   const SizedBox(height: AppSpacing.l),
                   SizedBox(
                     height: AppSpacing.buttonHeight,

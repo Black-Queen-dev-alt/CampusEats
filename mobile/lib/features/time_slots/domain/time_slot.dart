@@ -8,6 +8,7 @@ class TimeSlot extends Equatable {
     required this.endTime,
     required this.capacity,
     required this.reservedCount,
+    this.remainingPlaces,
   });
 
   final String id;
@@ -16,9 +17,13 @@ class TimeSlot extends Equatable {
   final String endTime;
   final int capacity;
   final int reservedCount;
+  final int? remainingPlaces;
 
-  bool get isFull => reservedCount >= capacity;
-  int get remaining => (capacity - reservedCount).clamp(0, capacity);
+  bool get isFull => remainingPlaces != null
+      ? remainingPlaces! <= 0
+      : reservedCount >= capacity;
+  int get remaining =>
+      remainingPlaces ?? (capacity - reservedCount).clamp(0, capacity);
 
   @override
   List<Object?> get props => [
@@ -28,5 +33,6 @@ class TimeSlot extends Equatable {
     endTime,
     capacity,
     reservedCount,
+    remainingPlaces,
   ];
 }

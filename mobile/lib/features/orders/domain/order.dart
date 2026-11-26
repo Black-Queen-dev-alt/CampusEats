@@ -2,11 +2,13 @@ import 'package:equatable/equatable.dart';
 
 class OrderItem extends Equatable {
   const OrderItem({
+    this.dishId,
     required this.name,
     required this.quantity,
     required this.unitPrice,
   });
 
+  final String? dishId;
   final String name;
   final int quantity;
   final int unitPrice;
@@ -14,7 +16,7 @@ class OrderItem extends Equatable {
   int get subtotal => quantity * unitPrice;
 
   @override
-  List<Object?> get props => [name, quantity, unitPrice];
+  List<Object?> get props => [dishId, name, quantity, unitPrice];
 }
 
 enum OrderStatus {
@@ -57,7 +59,7 @@ enum OrderStatus {
     unknown => 'Statut indisponible',
   };
 
-  bool get cancellable => this == received;
+  bool get cancellable => this == received || this == preparing;
 }
 
 class Order extends Equatable {
@@ -71,6 +73,7 @@ class Order extends Equatable {
     required this.status,
     this.cancellationDeadline,
     this.qrValue,
+    this.canCancel,
   });
 
   final String id;
@@ -82,8 +85,16 @@ class Order extends Equatable {
   final OrderStatus status;
   final DateTime? cancellationDeadline;
   final String? qrValue;
+  final bool? canCancel;
 
-  Order copyWith({OrderStatus? status, String? timeSlotLabel}) => Order(
+  bool get cancellationAllowed =>
+      status.cancellable && (canCancel ?? status.cancellable);
+
+  Order copyWith({
+    OrderStatus? status,
+    String? timeSlotLabel,
+    bool? canCancel,
+  }) => Order(
     id: id,
     number: number,
     timeSlotId: timeSlotId,
@@ -93,6 +104,7 @@ class Order extends Equatable {
     status: status ?? this.status,
     cancellationDeadline: cancellationDeadline,
     qrValue: qrValue,
+    canCancel: canCancel ?? this.canCancel,
   );
 
   @override
@@ -106,5 +118,6 @@ class Order extends Equatable {
     status,
     cancellationDeadline,
     qrValue,
+    canCancel,
   ];
 }

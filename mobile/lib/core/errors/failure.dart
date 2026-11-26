@@ -23,7 +23,9 @@ class NotFoundFailure extends Failure {
 }
 
 class ConflictFailure extends Failure {
-  const ConflictFailure([super.message = 'Conflit']);
+  const ConflictFailure([super.message = 'Conflit', this.code]);
+
+  final String? code;
 }
 
 /// Erreur 422 : `fieldErrors` associe un champ à son message.

@@ -5,6 +5,7 @@ import 'package:campus_eats_mobile/features/orders/domain/cancel_order.dart';
 import 'package:campus_eats_mobile/features/orders/domain/create_order.dart';
 import 'package:campus_eats_mobile/features/orders/domain/get_order.dart';
 import 'package:campus_eats_mobile/features/orders/domain/get_orders.dart';
+import 'package:campus_eats_mobile/features/orders/domain/order.dart';
 
 import 'orders_event.dart';
 import 'orders_state.dart';
@@ -24,7 +25,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     on<LoadNextOrdersPage>(_onLoadNext, transformer: droppable());
     on<OrderDetailsRequested>(_onDetailsRequested);
     on<CreateOrderRequested>(_onCreateOrder, transformer: droppable());
-    on<CancelOrderRequested>(_onCancelOrder);
+    on<CancelOrderRequested>(_onCancelOrder, transformer: droppable());
   }
 
   final GetOrders _getOrders;
@@ -108,10 +109,12 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
   ) async {
     emit(const OrderSubmitting());
     final result = await _createOrder(
+      menuId: event.menuId,
       timeSlotId: event.timeSlotId,
       items: event.items,
     );
-    if (result.failure is ConflictFailure) {
+    if (result.failure is ConflictFailure &&
+        _isSlotConflict(result.failure! as ConflictFailure)) {
       emit(SlotConflict(result.failure! as ConflictFailure));
     } else if (result.failure != null) {
       emit(OrdersFailure(result.failure!));
@@ -126,6 +129,14 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     }
   }
 
+  bool _isSlotConflict(ConflictFailure failure) {
+    return const {
+      'SLOT_FULL',
+      'SLOT_STARTED',
+      'TIME_SLOT_COMPLETED',
+    }.contains(failure.code);
+  }
+
   Future<void> _onCancelOrder(
     CancelOrderRequested event,
     Emitter<OrdersState> emit,
@@ -133,7 +144,12 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     final current = state;
     if (current is! OrderDetailLoaded) return;
     final snapshot = current.order;
-    emit(OrderDetailLoaded(snapshot, isCancelling: true));
+    emit(
+      OrderDetailLoaded(
+        snapshot.copyWith(status: OrderStatus.cancelled, canCancel: false),
+        isCancelling: true,
+      ),
+    );
 
     final result = await _cancelOrder(event.id);
     if (result.failure != null) {
@@ -145,7 +161,20 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
         ),
       );
     } else if (result.value != null) {
-      emit(OrderDetailLoaded(result.value!, isCancelling: false));
+      emit(
+        OrderDetailLoaded(
+          result.value!.copyWith(timeSlotLabel: snapshot.timeSlotLabel),
+          isCancelling: false,
+        ),
+      );
+    } else {
+      emit(
+        OrderDetailLoaded(
+          snapshot,
+          isCancelling: false,
+          failure: const ServerFailure('Annulation de la commande impossible'),
+        ),
+      );
     }
   }
 }

@@ -36,7 +36,13 @@ Failure mapDioError(DioException error) {
     case 404:
       return NotFoundFailure(message ?? 'Ressource introuvable');
     case 409:
-      return ConflictFailure(message ?? 'Conflit');
+      final code = body is Map && body['error'] is Map
+          ? (body['error'] as Map)['code']
+          : null;
+      return ConflictFailure(
+        message ?? 'Conflit',
+        code is String ? code : null,
+      );
     case 422:
       return ValidationFailure(
         message ?? 'Données invalides',
