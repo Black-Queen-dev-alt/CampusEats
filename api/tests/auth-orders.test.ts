@@ -164,6 +164,38 @@ describe('API authentication and order rules', () => {
     const orderId = attempts[successfulIndex].body.data.id as string;
     const ownerToken = studentTokens[successfulIndex];
     const otherStudentToken = studentTokens[rejectedIndex];
+    expect(attempts[successfulIndex].body.data.lines[0]).toMatchObject({
+      dishName: 'Concurrency Test Dish',
+      unitPriceInCents: 500,
+    });
+
+    await Dish.findByIdAndUpdate(dish.id, { priceInCents: 900 });
+    const orderDetail = await request(app)
+      .get(`/orders/${orderId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(orderDetail.status).toBe(200);
+    expect(orderDetail.body.data.canCancel).toBe(true);
+    expect(orderDetail.body.data.slotId).toMatchObject({
+      date: menuDate,
+      startTime: '23:50',
+      endTime: '23:59',
+    });
+    expect(orderDetail.body.data.lines[0]).toMatchObject({
+      dishName: 'Concurrency Test Dish',
+      unitPriceInCents: 500,
+    });
+
+    const ownerHistory = await request(app)
+      .get('/orders')
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(ownerHistory.status).toBe(200);
+    expect(ownerHistory.body.data[0].canCancel).toBe(true);
+
+    const forbiddenDetail = await request(app)
+      .get(`/orders/${orderId}`)
+      .set('Authorization', `Bearer ${otherStudentToken}`);
+    expect(forbiddenDetail.status).toBe(404);
+
     const staffSlotOrders = await request(app)
       .get(`/time-slots/${slot.id}/orders?page=1&limit=10`)
       .set('Authorization', `Bearer ${staffToken}`);

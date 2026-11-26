@@ -4,6 +4,8 @@ import { Schema, model, Document, Types } from 'mongoose';
 export interface OrderLine {
   dishId: Types.ObjectId;
   quantity: number;
+  dishName?: string;
+  unitPriceInCents?: number;
 }
 
 export type OrderStatus = 'received' | 'preparing' | 'ready' | 'withdrawn' | 'cancelled';
@@ -27,6 +29,8 @@ const OrderSchema = new Schema<OrderDocument>(
       {
         dishId: { type: Schema.Types.ObjectId, required: true, ref: 'Dish' },
         quantity: { type: Number, required: true, min: 1 },
+        dishName: { type: String, trim: true },
+        unitPriceInCents: { type: Number, min: 0, validate: Number.isInteger },
       },
     ],
     status: {
