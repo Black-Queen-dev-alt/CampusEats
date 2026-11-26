@@ -13,7 +13,12 @@ import 'package:campus_eats_mobile/features/auth/presentation/pages/welcome_page
 import 'package:campus_eats_mobile/features/kitchen/presentation/pages/kitchen_page.dart';
 import 'package:campus_eats_mobile/features/menu/presentation/pages/menu_page.dart';
 import 'package:campus_eats_mobile/features/orders/presentation/pages/orders_page.dart';
+import 'package:campus_eats_mobile/features/orders/presentation/pages/checkout_page.dart';
 import 'package:campus_eats_mobile/features/profile/presentation/pages/profile_page.dart';
+import 'package:campus_eats_mobile/features/time_slots/domain/time_slot.dart';
+import 'package:campus_eats_mobile/features/time_slots/presentation/pages/slot_picker_page.dart';
+import 'package:campus_eats_mobile/features/cart/presentation/pages/cart_page.dart';
+import 'package:campus_eats_mobile/features/menu/presentation/pages/dish_detail_page.dart';
 
 class AppRouter {
   static const _publicRoutes = {'/welcome', '/login', '/register'};
@@ -94,7 +99,35 @@ class AppRouter {
             ),
           ],
         ),
+        GoRoute(
+          path: '/menu/dishes/:dishId',
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is DishDetailArgs) {
+              return DishDetailPage(args: extra);
+            }
+            return Scaffold(
+              appBar: AppBar(title: const Text('Plat introuvable')),
+              body: const Center(
+                child: Text('Ouvrez le détail depuis le menu du jour.'),
+              ),
+            );
+          },
+        ),
+        GoRoute(path: '/cart', builder: (_, __) => const CartPage()),
         // Détail d'une commande (cible des notifications), hors barre du bas.
+        GoRoute(
+          path: '/orders/checkout/slots',
+          builder: (_, __) => const SlotPickerPage(),
+        ),
+        GoRoute(
+          path: '/orders/checkout',
+          builder: (_, state) {
+            final extra = state.extra;
+            if (extra is TimeSlot) return CheckoutPage(slot: extra);
+            return const SlotPickerPage();
+          },
+        ),
         GoRoute(
           path: '/orders/:id',
           builder: (_, state) =>

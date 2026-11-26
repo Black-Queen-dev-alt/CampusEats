@@ -9,6 +9,24 @@ import 'package:campus_eats_mobile/core/network/refresh_coordinator.dart';
 import 'package:campus_eats_mobile/core/storage/secure_token_storage.dart';
 import 'package:campus_eats_mobile/features/auth/data/auth_repository.dart';
 import 'package:campus_eats_mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:campus_eats_mobile/features/time_slots/data/mock_time_slot_repository.dart';
+import 'package:campus_eats_mobile/features/time_slots/domain/get_time_slots.dart';
+import 'package:campus_eats_mobile/features/time_slots/domain/time_slot_repository.dart';
+import 'package:campus_eats_mobile/features/time_slots/presentation/bloc/time_slots_bloc.dart';
+import 'package:campus_eats_mobile/features/orders/data/mock_orders_repository.dart';
+import 'package:campus_eats_mobile/features/orders/domain/cancel_order.dart';
+import 'package:campus_eats_mobile/features/orders/domain/create_order.dart';
+import 'package:campus_eats_mobile/features/orders/domain/get_order.dart';
+import 'package:campus_eats_mobile/features/orders/domain/get_orders.dart';
+import 'package:campus_eats_mobile/features/orders/domain/orders_repository.dart';
+import 'package:campus_eats_mobile/features/orders/presentation/bloc/orders_bloc.dart';
+import 'package:campus_eats_mobile/features/cart/presentation/cubit/cart_cubit.dart';
+import 'package:campus_eats_mobile/features/menu/data/menu_local_data_source.dart';
+import 'package:campus_eats_mobile/features/menu/data/menu_remote_data_source.dart';
+import 'package:campus_eats_mobile/features/menu/data/menu_repository_impl.dart';
+import 'package:campus_eats_mobile/features/menu/domain/get_menu.dart';
+import 'package:campus_eats_mobile/features/menu/domain/menu_repository.dart';
+import 'package:campus_eats_mobile/features/menu/presentation/bloc/menu_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -67,4 +85,55 @@ void setupDependencies() {
       tokenStorage: getIt<SecureTokenStorage>(),
     ),
   );
+
+  // Mocks temporaires Personne 3 : contractes fidèles, clairement identifiables.
+  // Remplacer ces deux enregistrements par les implémentations Remote
+  // quand les endpoints validés sont disponibles.
+  getIt.registerLazySingleton<TimeSlotRepository>(
+    () => const MockTimeSlotRepository(),
+  );
+  getIt.registerLazySingleton<GetTimeSlots>(
+    () => GetTimeSlots(getIt<TimeSlotRepository>()),
+  );
+  getIt.registerFactory<TimeSlotsBloc>(
+    () => TimeSlotsBloc(getTimeSlots: getIt<GetTimeSlots>()),
+  );
+
+  getIt.registerLazySingleton<OrdersRepository>(() => MockOrdersRepository());
+  getIt.registerLazySingleton<GetOrders>(
+    () => GetOrders(getIt<OrdersRepository>()),
+  );
+  getIt.registerLazySingleton<GetOrder>(
+    () => GetOrder(getIt<OrdersRepository>()),
+  );
+  getIt.registerLazySingleton<CreateOrder>(
+    () => CreateOrder(getIt<OrdersRepository>()),
+  );
+  getIt.registerLazySingleton<CancelOrder>(
+    () => CancelOrder(getIt<OrdersRepository>()),
+  );
+  getIt.registerLazySingleton<OrdersBloc>(
+    () => OrdersBloc(
+      getOrders: getIt<GetOrders>(),
+      getOrder: getIt<GetOrder>(),
+      createOrder: getIt<CreateOrder>(),
+      cancelOrder: getIt<CancelOrder>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<MenuLocalDataSource>(
+    () => const MenuLocalDataSource(),
+  );
+  getIt.registerLazySingleton<MenuRemoteDataSource>(
+    () => MenuRemoteDataSource(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<MenuRepository>(
+    () => MenuRepositoryImpl(
+      remote: getIt<MenuRemoteDataSource>(),
+      local: getIt<MenuLocalDataSource>(),
+    ),
+  );
+  getIt.registerLazySingleton<GetMenu>(() => GetMenu(getIt<MenuRepository>()));
+  getIt.registerFactory<MenuBloc>(() => MenuBloc(getMenu: getIt<GetMenu>()));
+  getIt.registerLazySingleton<CartCubit>(CartCubit.new);
 }
